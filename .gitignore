@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+.env
+cache/
+!cache/PostHog__posthog_prs_90d.json
+*.pyc
+.DS_Store
