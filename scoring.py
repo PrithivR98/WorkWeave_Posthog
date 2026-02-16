@@ -83,12 +83,12 @@ def top5_engineers(engineers_df: pd.DataFrame) -> pd.DataFrame:
         "shipping_score",
         "collaboration_score",
         "speed_score",
-        "merged_pr_count",
-        "avg_pr_size_log",
-        "avg_changed_files",
-        "median_cycle_time_hours",
-        "reviews_authored",
-        "prs_reviewed_that_merged",
+        # "merged_pr_count",
+        # "avg_pr_size_log",
+        # "avg_changed_files",
+        # "median_cycle_time_hours",
+        # "reviews_authored",
+        # "prs_reviewed_that_merged",
     ]
     cols = [c for c in cols if c in engineers_df.columns]
     return engineers_df[cols].head(5)

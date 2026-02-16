@@ -10,6 +10,46 @@ st.set_page_config(page_title="PostHog Engineer Impact", layout="wide")
 
 st.title("PostHog Engineer Impact (GitHub-only)")
 st.caption("PRs merged in last 90 days • shipping + reviews + cycle-time bonus")
+with st.expander("How this impact score is calculated", expanded=False):
+    st.markdown(
+        """
+**Impact = Shipping + Collaboration + Speed (cycle-time bonus)**
+
+All raw metrics are computed from GitHub data in the last 90 days.  
+To combine different units fairly, each raw metric is **z-score normalized**:
+
+
+### Shipping (delivering merged work)
+Raw metrics used:
+- **Merged PR count** = number of merged PRs authored
+- **Avg PR size (log)** = mean of `log(1 + additions + deletions)` per PR
+- **Avg files changed** = mean of `changedFiles` per PR
+
+Component formula:
+- `shipping_score = 0.5*z(merged_pr_count) + 0.3*z(avg_pr_size_log) + 0.2*z(avg_changed_files)`
+
+### Collaboration (helping others ship)
+Raw metrics used:
+- **Reviews authored** = count of review events written by the engineer
+- **PRs reviewed that merged** = number of distinct merged PRs they reviewed
+
+Component formula:
+- `collaboration_score = 0.6*z(reviews_authored) + 0.4*z(prs_reviewed_that_merged)`
+
+### Speed (cycle time bonus)
+Raw metric used:
+- **Median PR cycle time (hours)** = median of `(merged_at - created_at)` for authored merged PRs
+
+Lower cycle time is better, so:
+- `speed_score = -z(median_cycle_time_hours)`
+
+### Final impact score (weights from sidebar)
+- `impact_score = w_ship*shipping_score + w_collab*collaboration_score + w_speed*speed_score`
+
+**Note:** Sidebar weights are normalized to sum to 1.0.
+        """
+    )
+
 
 
 # ---------------------------
@@ -69,9 +109,21 @@ def impact_stacked_chart_weighted(engineers_df: pd.DataFrame, top_n: int = 10):
 with st.sidebar:
     st.header("Weights")
 
-    w_ship = st.slider("Shipping weight", 0.0, 1.0, 0.55, 0.05)
-    w_collab = st.slider("Collaboration weight", 0.0, 1.0, 0.30, 0.05)
-    w_speed = st.slider("Speed weight", 0.0, 1.0, 0.15, 0.05)
+    w_ship = st.slider(
+    "Shipping weight",
+    0.0, 1.0, 0.55, 0.05,
+    help="Weights the Shipping score: merged PR count + avg PR size (log(add+del)) + avg files changed."
+    )
+    w_collab = st.slider(
+        "Collaboration weight",
+        0.0, 1.0, 0.30, 0.05,
+        help="Weights the Collaboration score: reviews authored + distinct merged PRs reviewed."
+    )
+    w_speed = st.slider(
+        "Speed weight",
+        0.0, 1.0, 0.15, 0.05,
+        help="Weights the Speed bonus: faster median PR cycle time (created→merged) scores higher."
+    )
 
     # Normalize to sum to 1
     total = w_ship + w_collab + w_speed
@@ -160,6 +212,7 @@ w2.metric("Collaboration (weighted)", f"{row['w_collaboration']:.2f}")
 w3.metric("Speed (weighted)", f"{row['w_speed']:.2f}")
 
 st.markdown("### Raw Metrics (90 days)")
+st.caption("Raw metrics are computed from merged PRs in the last 90 days. PR size uses log(1 + additions + deletions).")
 r1, r2, r3 = st.columns(3)
 r1.metric("Merged PRs", int(row.get("merged_pr_count", 0)))
 r2.metric("Reviews Authored", int(row.get("reviews_authored", 0)))
